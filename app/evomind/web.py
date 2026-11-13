@@ -3,8 +3,10 @@ from litestar import Litestar,get,post
 from litestar.response import Response
 from .config import settings
 from .engine import EvoMind
+from .hf_models import HuggingFaceModels
 settings.prepare()
 assistant=EvoMind(settings.db_path or settings.data_dir/"evomind.sqlite3",settings.models_dir)
+hf_models=HuggingFaceModels(settings.models_dir)
 @get("/")
 async def index():return Response((Path(__file__).parent/"static"/"index.html").read_text(),media_type="text/html")
 @post("/api/chat")
@@ -33,13 +35,25 @@ async def add_goal(data:dict):
  return assistant.add_goal(title,str(data.get("details",""))) if title else {"error":"Goal title required"}
 @post("/api/goals/{goal_id:int}")
 async def update_goal(goal_id:int,data:dict):return assistant.update_goal(goal_id,data.get("status"),data.get("progress")) or {"error":"Goal not found"}
+@post("/api/hf/search")
+async def hf_search(data:dict):
+ try:return {"models":hf_models.search(str(data.get("query","litert-community")),int(data.get("limit",10)))}
+ except Exception as e:return {"error":str(e)}
+@post("/api/hf/files")
+async def hf_files(data:dict):
+ try:return {"files":hf_models.files(str(data.get("repo_id","")))}
+ except Exception as e:return {"error":str(e)}
+@post("/api/hf/download")
+async def hf_download(data:dict):
+ try:return hf_models.download(str(data.get("repo_id","")),str(data.get("filename","")))
+ except Exception as e:return {"error":str(e)}
 @get("/api/models")
 async def models():return {"active":assistant.models.active.key,"inventory":assistant.models.inventory(),"error":assistant.models.last_error}
 @post("/api/models/select")
 async def select(data:dict):
  try:return assistant.models.select(str(data.get("key","demo")),data.get("filename"))
  except Exception as e:return {"error":str(e),"active":assistant.models.active.key}
-app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,models,select])
+app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select])
 def main():
  import uvicorn
  uvicorn.run(app,host=settings.host,port=settings.port)
