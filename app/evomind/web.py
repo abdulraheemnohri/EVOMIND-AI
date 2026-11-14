@@ -86,7 +86,7 @@ async def task_update(task_id:int,data:dict):
 async def system_info():
  import os,platform,sys
  return {"platform":platform.platform(),"python":sys.version.split()[0],"architecture":platform.machine(),"host":settings.host,"port":settings.port,"data_dir":str(settings.data_dir),"models_dir":str(settings.models_dir),"pid":os.getpid(),"autostart":"Linux: scripts/install_autostart.sh. Android Debian: Termux:Boot host integration."}
-app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select,agent_list,agent_run,tool_run,task_list,task_create,task_update,system_info])
+app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select,agent_list,agent_history,agent_run,tool_run,task_list,task_create,task_update,system_info])
 def main():
  import uvicorn
  uvicorn.run(app,host=settings.host,port=settings.port)
