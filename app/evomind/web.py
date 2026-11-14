@@ -57,7 +57,7 @@ async def select(data:dict):
  except Exception as e:return {"error":str(e),"active":assistant.models.active.key}
 @get("/api/agents")
 async def agent_list():return {"agents":agents.list(),"tools":agents.tools()}
-@post("/api/agents/run")
+@get("/api/agents/history")\nasync def agent_history():return {"runs":assistant.db.rows("SELECT * FROM agent_runs ORDER BY id DESC LIMIT 50")}\n@post("/api/agents/run")
 async def agent_run(data:dict):
  try:return agents.run(str(data.get("agent","general")),str(data.get("text","")))
  except Exception as e:return {"error":str(e)}
