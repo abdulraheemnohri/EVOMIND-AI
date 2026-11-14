@@ -4,9 +4,11 @@ from litestar.response import Response
 from .config import settings
 from .engine import EvoMind
 from .agents import AgentHub
+from .hf_models import HuggingFaceModels
 settings.prepare()
 assistant=EvoMind(settings.db_path or settings.data_dir/"evomind.sqlite3",settings.models_dir)
 agents=AgentHub(assistant.db,assistant.models)
+hf_models=HuggingFaceModels(settings.models_dir)
 @get("/")
 async def index():return Response((Path(__file__).parent/"static"/"index.html").read_text(),media_type="text/html")
 @post("/api/chat")
@@ -37,15 +39,15 @@ async def add_goal(data:dict):
 async def update_goal(goal_id:int,data:dict):return assistant.update_goal(goal_id,data.get("status"),data.get("progress")) or {"error":"Goal not found"}
 @post("/api/hf/search")
 async def hf_search(data:dict):
- try:return {"models":assistant.hf_models.search(str(data.get("query","litert-community")),int(data.get("limit",10)))}
+ try:return {"models":hf_models.search(str(data.get("query","litert-community")),int(data.get("limit",10)))}
  except Exception as e:return {"error":str(e)}
 @post("/api/hf/files")
 async def hf_files(data:dict):
- try:return {"files":assistant.hf_models.files(str(data.get("repo_id","")))}
+ try:return {"files":hf_models.files(str(data.get("repo_id","")))}
  except Exception as e:return {"error":str(e)}
 @post("/api/hf/download")
 async def hf_download(data:dict):
- try:return assistant.hf_models.download(str(data.get("repo_id","")),str(data.get("filename","")))
+ try:return hf_models.download(str(data.get("repo_id","")),str(data.get("filename","")))
  except Exception as e:return {"error":str(e)}
 @get("/api/models")
 async def models():return {"active":assistant.models.active.key,"inventory":assistant.models.inventory(),"error":assistant.models.last_error}
@@ -83,7 +85,7 @@ async def task_update(task_id:int,data:dict):
 @get("/api/system")
 async def system_info():
  import os,platform,sys
- return {"platform":platform.platform(),"python":sys.version.split()[0],"architecture":platform.machine(),"host":settings.host,"port":settings.port,"data_dir":str(settings.data_dir),"models_dir":str(settings.models_dir),"pid":os.getpid(),"autostart":"Use scripts/install_autostart.sh (systemd) or Android Termux:Boot guide."}
+ return {"platform":platform.platform(),"python":sys.version.split()[0],"architecture":platform.machine(),"host":settings.host,"port":settings.port,"data_dir":str(settings.data_dir),"models_dir":str(settings.models_dir),"pid":os.getpid(),"autostart":"Linux: scripts/install_autostart.sh. Android Debian: Termux:Boot host integration."}
 app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select,agent_list,agent_run,tool_run,task_list,task_create,task_update,system_info])
 def main():
  import uvicorn
