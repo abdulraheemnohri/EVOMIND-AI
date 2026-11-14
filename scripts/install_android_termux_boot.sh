@@ -5,7 +5,7 @@ if ! command -v proot-distro >/dev/null 2>&1; then
   echo "Install proot-distro in Termux first: pkg install proot-distro" >&2
   exit 1
 fi
-DEBIAN_DIR="${EVOMIND_DEBIAN_DIR:-\$HOME/EVOMIND-AI}"
+DEBIAN_DIR="${EVOMIND_DEBIAN_DIR:-$HOME/EVOMIND-AI}"
 mkdir -p "$HOME/.termux/boot"
 cat > "$HOME/.termux/boot/start-evomind" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
