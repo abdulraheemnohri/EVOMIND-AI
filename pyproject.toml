@@ -1,0 +1,25 @@
+[build-system]
+requires=["setuptools>=68","wheel"]
+build-backend="setuptools.build_meta"
+[project]
+name="evomind-ai"
+version="0.1.0"
+description="Local-first self-growing AI assistant"
+readme="README.md"
+requires-python=">=3.10"
+license={text="Apache-2.0"}
+dependencies=["litestar>=2.10,<3","uvicorn>=0.30,<1"]
+[project.optional-dependencies]
+gguf=["llama-cpp-python>=0.3.8"]
+litert=["litert-lm-api"]
+hf=["huggingface_hub>=0.27"]
+dev=["pytest>=8","httpx>=0.27"]
+[project.scripts]
+evomind="evomind.web:main"
+[tool.setuptools.packages.find]
+where=["app"]
+[tool.setuptools.package-data]
+evomind=["static/*.html"]
+[tool.pytest.ini_options]
+pythonpath=["app"]
+testpaths=["tests"]
