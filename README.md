@@ -38,7 +38,7 @@ sudo loginctl enable-linger "$USER"
 Manage it with `systemctl --user status evomind`, `systemctl --user restart evomind` and `journalctl --user -u evomind -f`. Uninstall with `systemctl --user disable --now evomind` and remove `~/.config/systemd/user/evomind.service`.
 
 ## Android Debian / Termux note
-A Debian proot container on Android normally does not run systemd as PID 1. Install Termux:Boot in the host Termux app, install `proot-distro`, clone this repository into Debian at `~/EVOMIND-AI`, then run `bash scripts/install_android_termux_boot.sh` from Termux (not from inside Debian). Android battery management can still stop background processes; this launcher is best-effort. Keep the phone charged and exempt Termux from battery optimization where Android permits.
+A Debian proot container on Android normally does not run systemd as PID 1. Install Termux:Boot in the host Termux app, install `proot-distro`, clone this repository into Debian at `~/EVOMIND-AI`, then download and run the installer from the Termux host shell (not inside Debian):\n```bash\ncurl -fsSL https://raw.githubusercontent.com/abdulraheemnohri/EVOMIND-AI/feature/evomind-foundation/scripts/install_android_termux_boot.sh -o "$TMPDIR/install-evomind-boot.sh"\nbash "$TMPDIR/install-evomind-boot.sh"\n``` Android battery management can still stop background processes; this launcher is best-effort. Keep the phone charged and exempt Termux from battery optimization where Android permits.
 
 ## Windows
 ```powershell
