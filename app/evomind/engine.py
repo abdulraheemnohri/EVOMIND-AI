@@ -20,7 +20,7 @@ class EvoMind:
    msgs=[{"role":"system","content":system}]+[{"role":m["role"],"content":m["content"]} for m in reversed(hist)]
    try:reply,via=self.models.generate(msgs),"model:"+self.models.active.key
    except Exception as e:reply,via="Local model error: "+str(e)+". Conversation was saved.","runtime-error"
-  mid,_=self.db.execute("INSERT INTO messages(role,content,runtime) VALUES(?,?,?)",(reply,via));return {"reply":reply,"id":mid,"via":via}
+  mid,_=self.db.execute("INSERT INTO messages(role,content,runtime) VALUES('assistant',?,?)",(reply,via));return {"reply":reply,"id":mid,"via":via}
  def reflect(self):
   rows=self.db.rows("SELECT content FROM messages WHERE role='user' ORDER BY id DESC LIMIT 300");n=self.memory.reflect_candidates([r["content"] for r in rows])
   self.db.execute("INSERT INTO events(kind,detail) VALUES('reflection',?)",(str(n)+" pending candidates",));return {"candidates":n,"pending":self.memory.pending()}
