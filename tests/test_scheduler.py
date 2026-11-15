@@ -53,3 +53,14 @@ def test_scheduler_cancel_and_error_state(tmp_path):
     assert s.cancel(job["id"]) is True
     assert s.get(job["id"])["status"]=="cancelled"
     assert s.cancel(99999) is False
+
+def test_scheduler_marks_interrupted_jobs_for_manual_review(tmp_path):
+    db,s=build(tmp_path)
+    job=s.create("Interrupted","reflect",{},datetime.now(timezone.utc).isoformat())
+    db.execute("UPDATE scheduled_jobs SET status='running' WHERE id=?",(job["id"],))
+    s.start()
+    s.stop()
+    saved=s.get(job["id"])
+    assert saved["status"]=="interrupted"
+    assert saved["enabled"]==0
+    assert "schedule it again" in saved["last_result"]
