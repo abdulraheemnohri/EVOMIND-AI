@@ -6,10 +6,10 @@ Local-first personal AI workspace with persistent SQLite memory, feedback, appro
 - Local chat, chat history, approved memories and reviewable reflection candidates.
 - Specialist agent modes: general assistant, planner, research analyst, writer, coder, data analyst, organizer, tutor, translator, reviewer, architect, product manager, debugger and creative partner.
 - Safe local tools: arithmetic calculator, approved-memory search, goal reader, local clock and task creation.
-- Task board with pending / in-progress / done / cancelled states.
+- Task board with pending / in-progress / done / cancelled states.\n- Offline local knowledge base for pasted text and Markdown, chunked retrieval, duplicate detection, deletion and RAG context for chat and agents.\n- Workspace-scoped computer tools: system information, workspace listing and text reading, plus approval-gated file writes. No shell command execution.
 - Local model inventory and optional Hugging Face model discovery/download.
 - Responsive dashboard, runtime diagnostics, and SQLite persistence.
-- No arbitrary generated Python, shell, filesystem, browser or network execution. Research mode analyzes supplied information; it does not pretend to browse the internet.
+- No arbitrary generated Python, shell, browser or network execution. Workspace file access is restricted to the EVOMIND workspace directory; writes require a separate user approval. Research mode analyzes supplied information; it does not pretend to browse the internet.
 
 ## Linux terminal setup
 ```bash
@@ -17,7 +17,7 @@ sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git
 git clone https://github.com/abdulraheemnohri/EVOMIND-AI.git
 cd EVOMIND-AI
-git checkout feature/evomind-foundation
+git checkout feature/evomind-v3-knowledge-tools
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
@@ -68,4 +68,4 @@ Put compatible `.gguf` or `.litertlm` files in `models/`. Install `pip install -
 pip install -e ".[dev]"
 pytest -q
 ```
-Configuration: `EVOMIND_HOST`, `EVOMIND_PORT`, `EVOMIND_DATA_DIR`, `EVOMIND_MODELS_DIR`, `EVOMIND_DB`.
+Configuration: `EVOMIND_HOST`, `EVOMIND_PORT`, `EVOMIND_DATA_DIR`, `EVOMIND_MODELS_DIR`, `EVOMIND_DB`. The knowledge base and approval queue are stored in the same local SQLite database. Workspace tools use `EVOMIND_DATA_DIR/workspace`.
