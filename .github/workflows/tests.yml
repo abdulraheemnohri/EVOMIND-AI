@@ -7,11 +7,18 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
       - run: python -m pip install -U pip
       - run: pip install -e ".[dev]"
       - run: pytest -q
+      - name: Validate Linux startup scripts
+        if: matrix.python-version == '3.11'
+        run: bash -n scripts/run.sh scripts/install_autostart.sh scripts/install_android_termux_boot.sh

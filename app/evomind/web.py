@@ -3,9 +3,11 @@ from litestar import Litestar,get,post
 from litestar.response import Response
 from .config import settings
 from .engine import EvoMind
+from .agents import AgentHub
 from .hf_models import HuggingFaceModels
 settings.prepare()
 assistant=EvoMind(settings.db_path or settings.data_dir/"evomind.sqlite3",settings.models_dir)
+agents=AgentHub(assistant.db,assistant.models)
 hf_models=HuggingFaceModels(settings.models_dir)
 @get("/")
 async def index():return Response((Path(__file__).parent/"static"/"index.html").read_text(),media_type="text/html")
@@ -53,7 +55,40 @@ async def models():return {"active":assistant.models.active.key,"inventory":assi
 async def select(data:dict):
  try:return assistant.models.select(str(data.get("key","demo")),data.get("filename"))
  except Exception as e:return {"error":str(e),"active":assistant.models.active.key}
-app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select])
+@get("/api/agents")
+async def agent_list():return {"agents":agents.list(),"tools":agents.tools()}
+@get("/api/agents/history")
+async def agent_history():return {"runs":assistant.db.rows("SELECT * FROM agent_runs ORDER BY id DESC LIMIT 50")}
+@post("/api/agents/run")
+async def agent_run(data:dict):
+ try:return agents.run(str(data.get("agent","general")),str(data.get("text","")))
+ except Exception as e:return {"error":str(e)}
+@post("/api/tools/{tool:str}")
+async def tool_run(tool:str,data:dict):
+ try:return agents.use_tool(tool,data)
+ except Exception as e:return {"error":str(e)}
+@get("/api/tasks")
+async def task_list():return {"tasks":assistant.db.rows("SELECT * FROM tasks ORDER BY id DESC LIMIT 200")}
+@post("/api/tasks")
+async def task_create(data:dict):
+ title=str(data.get("title","")).strip()
+ if not title:return {"error":"Task title required"}
+ if len(title)>180:return {"error":"Task title too long"}
+ i,_=assistant.db.execute("INSERT INTO tasks(title,description) VALUES(?,?)",(title,str(data.get("description",""))[:4000]))
+ return {"task":assistant.db.one("SELECT * FROM tasks WHERE id=?",(i,))}
+@post("/api/tasks/{task_id:int}")
+async def task_update(task_id:int,data:dict):
+ row=assistant.db.one("SELECT * FROM tasks WHERE id=?",(task_id,))
+ if not row:return {"error":"Task not found"}
+ status=data.get("status",row["status"])
+ if status not in ("pending","in_progress","done","cancelled"):return {"error":"Invalid task status"}
+ assistant.db.execute("UPDATE tasks SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(status,task_id))
+ return {"task":assistant.db.one("SELECT * FROM tasks WHERE id=?",(task_id,))}
+@get("/api/system")
+async def system_info():
+ import os,platform,sys
+ return {"platform":platform.platform(),"python":sys.version.split()[0],"architecture":platform.machine(),"host":settings.host,"port":settings.port,"data_dir":str(settings.data_dir),"models_dir":str(settings.models_dir),"pid":os.getpid(),"autostart":"Linux: scripts/install_autostart.sh. Android Debian: Termux:Boot host integration."}
+app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select,agent_list,agent_history,agent_run,tool_run,task_list,task_create,task_update,system_info])
 def main():
  import uvicorn
  uvicorn.run(app,host=settings.host,port=settings.port)
