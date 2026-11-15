@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS knowledge_documents(id INTEGER PRIMARY KEY,title TEXT
 CREATE TABLE IF NOT EXISTS knowledge_chunks(id INTEGER PRIMARY KEY,document_id INTEGER NOT NULL REFERENCES knowledge_documents(id) ON DELETE CASCADE,chunk_index INTEGER NOT NULL,content TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_doc ON knowledge_chunks(document_id,chunk_index);
 CREATE TABLE IF NOT EXISTS tool_requests(id INTEGER PRIMARY KEY,tool TEXT NOT NULL,payload TEXT NOT NULL,status TEXT DEFAULT 'pending',result TEXT DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS scheduled_jobs(id INTEGER PRIMARY KEY,title TEXT NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL,run_at TEXT NOT NULL,interval_seconds INTEGER DEFAULT 0,enabled INTEGER DEFAULT 1,status TEXT DEFAULT 'scheduled',last_run_at TEXT,last_result TEXT DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_scheduled_jobs_due ON scheduled_jobs(enabled,status,run_at);
 """
 class Database:
     def __init__(self,path):
