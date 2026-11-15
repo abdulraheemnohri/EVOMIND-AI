@@ -7,13 +7,20 @@ CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,title TEXT,details TEXT 
 CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY,kind TEXT,detail TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY,title TEXT NOT NULL,description TEXT DEFAULT '',status TEXT DEFAULT 'pending',result TEXT DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS agent_runs(id INTEGER PRIMARY KEY,agent TEXT NOT NULL,input TEXT NOT NULL,output TEXT DEFAULT '',status TEXT DEFAULT 'completed',created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS app_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);"""
+CREATE TABLE IF NOT EXISTS app_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS knowledge_documents(id INTEGER PRIMARY KEY,title TEXT NOT NULL,source TEXT DEFAULT 'pasted text',content_hash TEXT NOT NULL UNIQUE,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS knowledge_chunks(id INTEGER PRIMARY KEY,document_id INTEGER NOT NULL REFERENCES knowledge_documents(id) ON DELETE CASCADE,chunk_index INTEGER NOT NULL,content TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_doc ON knowledge_chunks(document_id,chunk_index);
+CREATE TABLE IF NOT EXISTS tool_requests(id INTEGER PRIMARY KEY,tool TEXT NOT NULL,payload TEXT NOT NULL,status TEXT DEFAULT 'pending',result TEXT DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+"""
 class Database:
     def __init__(self,path):
         self.path=str(path);self.lock=threading.RLock()
-        with self.connect() as d:d.executescript(SCHEMA)
+        with self.connect() as d:
+            d.execute("PRAGMA foreign_keys=ON")
+            d.executescript(SCHEMA)
     def connect(self):
-        d=sqlite3.connect(self.path,timeout=20,check_same_thread=False);d.row_factory=sqlite3.Row;return d
+        d=sqlite3.connect(self.path,timeout=20,check_same_thread=False);d.row_factory=sqlite3.Row;d.execute("PRAGMA foreign_keys=ON");return d
     def execute(self,q,p=()):
         with self.lock,self.connect() as d:
             c=d.execute(q,p);return c.lastrowid,c.rowcount
@@ -23,5 +30,5 @@ class Database:
         with self.lock,self.connect() as d:
             x=d.execute(q,p).fetchone();return dict(x) if x else None
     def count(self,t):
-        if t not in {"messages","memories","skills","goals","events","tasks","agent_runs"}:raise ValueError("bad table")
+        if t not in {"messages","memories","skills","goals","events","tasks","agent_runs","knowledge_documents","knowledge_chunks","tool_requests"}:raise ValueError("bad table")
         return self.one("SELECT COUNT(*) n FROM "+t)["n"]
