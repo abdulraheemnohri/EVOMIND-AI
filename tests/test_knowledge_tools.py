@@ -66,3 +66,23 @@ def test_agent_tool_registry_includes_workspace_and_approval_tools(tmp_path):
     ids={x["id"] for x in hub.tools()}
     assert {"workspace_list","workspace_read","workspace_write_request"} <= ids
     assert hub.use_tool("workspace_list",{"path":"."})["items"]==[]
+
+def test_workspace_rejects_symlink_escape(tmp_path):
+    root=tmp_path/"workspace";root.mkdir()
+    outside=tmp_path/"outside";outside.mkdir()
+    (root/"link").symlink_to(outside,target_is_directory=True)
+    tools=WorkspaceTools(new_db(tmp_path),root)
+    with pytest.raises(ValueError):
+        tools.run("workspace_write_request",{"path":"link/escape.md","content":"no"})
+
+def test_agent_retrieves_local_knowledge(tmp_path):
+    db=new_db(tmp_path);kb=KnowledgeBase(db)
+    kb.add_text("Project note","EVOMIND uses offline local retrieval for private notes.")
+    class Model:
+        active=type("Runtime",(),{"key":"test"})()
+        def __init__(self):self.messages=None
+        def generate(self,messages):self.messages=messages;return "retrieved"
+    model=Model();hub=AgentHub(db,model,kb,WorkspaceTools(db,tmp_path/"workspace"))
+    result=hub.run("researcher","How does EVOMIND retrieve private notes?")
+    assert result["reply"]=="retrieved"
+    assert "offline local retrieval" in model.messages[0]["content"]
