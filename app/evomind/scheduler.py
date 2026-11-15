@@ -88,6 +88,7 @@ class JobScheduler:
             self._stop.wait(self.poll_seconds)
     def start(self):
         if self._thread and self._thread.is_alive():return
+        self.db.execute("UPDATE scheduled_jobs SET status='interrupted',enabled=0,last_result='Previous process stopped while this job was running; review and schedule it again.',updated_at=CURRENT_TIMESTAMP WHERE status='running'")
         self._stop.clear();self._thread=threading.Thread(target=self._loop,name="evomind-scheduler",daemon=True);self._thread.start()
     def stop(self):
         self._stop.set()
