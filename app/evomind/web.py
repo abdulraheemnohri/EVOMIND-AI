@@ -5,7 +5,8 @@ from .config import settings
 from .engine import EvoMind
 from .agents import AgentHub
 from .system_tools import WorkspaceTools
-from .hf_models import HuggingFaceModels\nfrom .scheduler import JobScheduler
+from .hf_models import HuggingFaceModels
+from .scheduler import JobScheduler
 settings.prepare()
 assistant=EvoMind(settings.db_path or settings.data_dir/"evomind.sqlite3",settings.models_dir)
 workspace=WorkspaceTools(assistant.db,settings.data_dir/"workspace")
