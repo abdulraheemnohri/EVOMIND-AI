@@ -7,7 +7,7 @@ class EvoMind:
  def __init__(self,db_path,models_dir):
   self.db=Database(db_path);self.memory=MemoryStore(self.db);self.skills=SkillRegistry(self.db);self.models=ModelManager(models_dir);self.knowledge=KnowledgeBase(self.db)
  def stats(self):
-  return {"messages":self.db.count("messages"),"memories":self.db.count("memories"),"pending_memories":len(self.memory.pending()),"skills":self.db.count("skills"),"goals":self.db.count("goals"),"events":self.db.count("events"),"tasks":self.db.count("tasks"),"agent_runs":self.db.count("agent_runs"),"knowledge_documents":self.db.count("knowledge_documents"),"knowledge_chunks":self.db.count("knowledge_chunks"),"pending_tool_requests":self.db.one("SELECT COUNT(*) n FROM tool_requests WHERE status='pending'")["n"],"runtime":self.models.active.key}
+  return {"messages":self.db.count("messages"),"memories":self.db.count("memories"),"pending_memories":len(self.memory.pending()),"skills":self.db.count("skills"),"goals":self.db.count("goals"),"events":self.db.count("events"),"tasks":self.db.count("tasks"),"agent_runs":self.db.count("agent_runs"),"knowledge_documents":self.db.count("knowledge_documents"),"knowledge_chunks":self.db.count("knowledge_chunks"),"pending_tool_requests":self.db.one("SELECT COUNT(*) n FROM tool_requests WHERE status='pending'")["n"],"scheduled_jobs":self.db.count("scheduled_jobs"),"active_scheduled_jobs":self.db.one("SELECT COUNT(*) n FROM scheduled_jobs WHERE enabled=1 AND status='scheduled'")["n"],"runtime":self.models.active.key}
  def chat(self,text):
   text=(text or "").strip()
   if not text:return {"reply":"Please enter a message.","id":None,"via":"validation"}
