@@ -54,8 +54,8 @@ class JobScheduler:
             result=self.assistant.reflect()
             return "Reflection completed; "+str(result.get("candidates",0))+" candidate memories queued for review."
         if row["kind"]=="create_task":
-            task=self.assistant.add_task(payload["title"],payload.get("description",""))
-            return "Created task #"+str(task["id"])+": "+task["title"]
+            task_id,_=self.db.execute("INSERT INTO tasks(title,description) VALUES(?,?)",(payload["title"],payload.get("description","")))
+            return "Created task #"+str(task_id)+": "+payload["title"]
         if row["kind"]=="agent_run":
             result=self.agents.run(payload["agent"],payload["text"])
             return result["reply"][:4000]
