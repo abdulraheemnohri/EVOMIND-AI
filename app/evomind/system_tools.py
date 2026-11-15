@@ -1,5 +1,5 @@
 """Approval-gated, workspace-scoped computer tools. No shell execution."""
-import json,platform,sys,os
+import json,platform,sys,os,uuid
 from pathlib import Path
 class WorkspaceTools:
     MAX_FILE_BYTES=1_000_000
@@ -8,9 +8,15 @@ class WorkspaceTools:
         self.db=db;self.root=Path(workspace).resolve();self.root.mkdir(parents=True,exist_ok=True)
     def _path(self,relative):
         if not isinstance(relative,str) or not relative.strip():raise ValueError("A workspace-relative path is required")
-        candidate=(self.root/relative).resolve()
-        try:candidate.relative_to(self.root)
+        raw=Path(relative)
+        if raw.is_absolute():raise ValueError("Use a workspace-relative path, not an absolute path")
+        candidate=Path(os.path.abspath(str(self.root/raw)))
+        try:parts=candidate.relative_to(self.root).parts
         except ValueError:raise ValueError("Path escapes the EVOMIND workspace")
+        current=self.root
+        for part in parts:
+            current=current/part
+            if current.is_symlink():raise ValueError("Symbolic links are not allowed in workspace paths")
         return candidate
     def tools(self):
         return [
@@ -34,7 +40,7 @@ class WorkspaceTools:
         if tool=="workspace_read":
             path=self._path(args.get("path",""))
             if path.suffix.lower() not in self.ALLOWED_READ:raise ValueError("File extension is not allowed for reading")
-            if path.is_symlink() or not path.is_file():raise ValueError("Workspace file not found")
+            if not path.is_file():raise ValueError("Workspace file not found")
             if path.stat().st_size>self.MAX_FILE_BYTES:raise ValueError("File exceeds 1 MB")
             try:return {"path":str(path.relative_to(self.root)),"content":path.read_text(encoding="utf-8")}
             except UnicodeDecodeError:raise ValueError("File is not UTF-8 text")
@@ -55,19 +61,20 @@ class WorkspaceTools:
         if not row:return {"ok":False,"error":"Request not found"}
         if row["status"]!="pending":return {"ok":False,"error":"Request has already been decided"}
         if not approve:
-            self.db.execute("UPDATE tool_requests SET status='rejected',result='Rejected by user',updated_at=CURRENT_TIMESTAMP WHERE id=?",(request_id,))
-            return {"ok":True,"status":"rejected"}
+            _,changed=self.db.execute("UPDATE tool_requests SET status='rejected',result='Rejected by user',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='pending'",(request_id,))
+            return {"ok":changed==1,"status":"rejected" if changed==1 else "already_decided"}
         if row["tool"]!="workspace_write_request":return {"ok":False,"error":"Unsupported approval action"}
+        _,changed=self.db.execute("UPDATE tool_requests SET status='executing',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='pending'",(request_id,))
+        if changed!=1:return {"ok":False,"error":"Request has already been decided"}
         try:
             payload=json.loads(row["payload"]);path=self._path(payload["path"])
             if path.suffix.lower() not in self.ALLOWED_READ:raise ValueError("File extension is not allowed")
             path.parent.mkdir(parents=True,exist_ok=True)
-            # Resolve again after creating parent folders to prevent path traversal.
             path=self._path(payload["path"])
-            if path.exists() and path.is_symlink():raise ValueError("Refusing to overwrite a symbolic link")
-            temp=path.with_name(path.name+".evomind-tmp")
-            temp.write_text(payload["content"],encoding="utf-8")
-            temp.replace(path)
+            if path.exists() and not path.is_file():raise ValueError("Target is not a regular file")
+            temp=path.with_name(path.name+".evomind-"+uuid.uuid4().hex+".tmp")
+            with temp.open("x",encoding="utf-8") as handle:handle.write(payload["content"])
+            os.replace(temp,path)
             result="Wrote "+str(path.relative_to(self.root))
             self.db.execute("UPDATE tool_requests SET status='executed',result=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(result,request_id))
             self.db.execute("INSERT INTO events(kind,detail) VALUES('tool_executed',?)",(str(request_id),))
