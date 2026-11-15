@@ -68,4 +68,9 @@ Put compatible `.gguf` or `.litertlm` files in `models/`. Install `pip install -
 pip install -e ".[dev]"
 pytest -q
 ```
-Configuration: `EVOMIND_HOST`, `EVOMIND_PORT`, `EVOMIND_DATA_DIR`, `EVOMIND_MODELS_DIR`, `EVOMIND_DB`. The knowledge base and approval queue are stored in the same local SQLite database. Workspace tools use `EVOMIND_DATA_DIR/workspace`.
+Configuration: `EVOMIND_HOST`, `EVOMIND_PORT`, `EVOMIND_DATA_DIR`, `EVOMIND_MODELS_DIR`, `EVOMIND_DB`. The knowledge base, approval queue and scheduled jobs are stored in the same local SQLite database. Workspace tools use `EVOMIND_DATA_DIR/workspace`.
+
+## Persistent agent scheduler
+The dashboard's **Agent scheduler** stores jobs in SQLite and checks for due work while the app is running. Jobs survive application restarts and resume when EVOMIND starts again. Supported actions are: `reflect` (queues memory candidates for human review), `create_task` (adds a local task), and one-time `agent_run` (runs one selected specialist agent). Arbitrary shell, Python, network and file-write jobs are not supported. Recurring schedules are limited to reflection and local task creation; the minimum interval is 60 seconds and the maximum is 30 days. Agent prompt runs are one-shot to avoid unattended repeated model execution. All times must include an ISO-8601 timezone; the dashboard converts your device's local time to UTC.
+
+API: `GET /api/scheduled-jobs`, `POST /api/scheduled-jobs`, and `POST /api/scheduled-jobs/{id}/cancel`. The scheduler starts/stops with the Litestar application lifecycle. On Linux, the systemd service starts EVOMIND at boot; on Android, the Termux:Boot host launcher starts the Debian app best-effort. Keep the device awake / exempt the host app from battery optimization if you need reliable background execution.
