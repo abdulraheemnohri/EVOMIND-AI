@@ -71,12 +71,12 @@ def test_workspace_rejects_symlink_escape(tmp_path):
     root=tmp_path/"workspace";root.mkdir()
     outside=tmp_path/"outside";outside.mkdir()
     (root/"link").symlink_to(outside,target_is_directory=True)
-    tools=WorkspaceTools(new_db(tmp_path),root)
+    tools=WorkspaceTools(setup(tmp_path),root)
     with pytest.raises(ValueError):
         tools.run("workspace_write_request",{"path":"link/escape.md","content":"no"})
 
 def test_agent_retrieves_local_knowledge(tmp_path):
-    db=new_db(tmp_path);kb=KnowledgeBase(db)
+    db=setup(tmp_path);kb=KnowledgeBase(db)
     kb.add_text("Project note","EVOMIND uses offline local retrieval for private notes.")
     class Model:
         active=type("Runtime",(),{"key":"test"})()
@@ -91,12 +91,12 @@ def test_workspace_rejects_symlink_escape(tmp_path):
     root=tmp_path/"workspace";root.mkdir()
     outside=tmp_path/"outside";outside.mkdir()
     (root/"link").symlink_to(outside,target_is_directory=True)
-    tools=WorkspaceTools(new_db(tmp_path),root)
+    tools=WorkspaceTools(setup(tmp_path),root)
     with pytest.raises(ValueError):
         tools.run("workspace_write_request",{"path":"link/escape.md","content":"no"})
 
 def test_agent_retrieves_local_knowledge(tmp_path):
-    db=new_db(tmp_path);kb=KnowledgeBase(db)
+    db=setup(tmp_path);kb=KnowledgeBase(db)
     kb.add_text("Project note","EVOMIND uses offline local retrieval for private notes.")
     class Model:
         active=type("Runtime",(),{"key":"test"})()
