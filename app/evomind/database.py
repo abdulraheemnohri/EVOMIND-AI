@@ -32,5 +32,5 @@ class Database:
         with self.lock,self.connect() as d:
             x=d.execute(q,p).fetchone();return dict(x) if x else None
     def count(self,t):
-        if t not in {"messages","memories","skills","goals","events","tasks","agent_runs","knowledge_documents","knowledge_chunks","tool_requests"}:raise ValueError("bad table")
+        if t not in {"messages","memories","skills","goals","events","tasks","agent_runs","knowledge_documents","knowledge_chunks","tool_requests","scheduled_jobs"}:raise ValueError("bad table")
         return self.one("SELECT COUNT(*) n FROM "+t)["n"]
