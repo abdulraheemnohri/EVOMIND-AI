@@ -6,10 +6,10 @@ Local-first personal AI workspace with persistent SQLite memory, feedback, appro
 - Local chat, chat history, approved memories and reviewable reflection candidates.
 - Specialist agent modes: general assistant, planner, research analyst, writer, coder, data analyst, organizer, tutor, translator, reviewer, architect, product manager, debugger and creative partner.
 - Safe local tools: arithmetic calculator, approved-memory search, goal reader, local clock and task creation.
-- Task board with pending / in-progress / done / cancelled states.
+- Task board with pending / in-progress / done / cancelled states.\n- Offline local knowledge base for pasted text and Markdown, chunked retrieval, duplicate detection, deletion and RAG context for chat and agents.\n- Workspace-scoped computer tools: system information, workspace listing and text reading, plus approval-gated file writes. No shell command execution.
 - Local model inventory and optional Hugging Face model discovery/download.
 - Responsive dashboard, runtime diagnostics, and SQLite persistence.
-- No arbitrary generated Python, shell, filesystem, browser or network execution. Research mode analyzes supplied information; it does not pretend to browse the internet.
+- No arbitrary generated Python, shell, browser or network execution. Workspace file access is restricted to the EVOMIND workspace directory; writes require a separate user approval. Research mode analyzes supplied information; it does not pretend to browse the internet.
 
 ## Linux terminal setup
 ```bash
@@ -17,7 +17,7 @@ sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git
 git clone https://github.com/abdulraheemnohri/EVOMIND-AI.git
 cd EVOMIND-AI
-git checkout feature/evomind-foundation
+git checkout feature/evomind-v3-knowledge-tools
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
@@ -40,7 +40,7 @@ Manage it with `systemctl --user status evomind`, `systemctl --user restart evom
 ## Android Debian / Termux note
 A Debian proot container on Android normally does not run systemd as PID 1. Install Termux:Boot in the host Termux app, install `proot-distro`, clone this repository into Debian at `/root/EVOMIND-AI` (or set `EVOMIND_DEBIAN_DIR=/home/droid/EVOMIND-AI` in Termux if using the `droid` account), then download and run the installer from the Termux host shell (not inside Debian):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/abdulraheemnohri/EVOMIND-AI/feature/evomind-v2/scripts/install_android_termux_boot.sh -o "$TMPDIR/install-evomind-boot.sh"
+curl -fsSL https://raw.githubusercontent.com/abdulraheemnohri/EVOMIND-AI/feature/evomind-v3-knowledge-tools/scripts/install_android_termux_boot.sh -o "$TMPDIR/install-evomind-boot.sh"
 EVOMIND_DEBIAN_USER=droid EVOMIND_DEBIAN_DIR=/home/droid/EVOMIND-AI bash "$TMPDIR/install-evomind-boot.sh"
 ``` Android battery management can still stop background processes; this launcher is best-effort. Keep the phone charged and exempt Termux from battery optimization where Android permits.
 
@@ -68,4 +68,9 @@ Put compatible `.gguf` or `.litertlm` files in `models/`. Install `pip install -
 pip install -e ".[dev]"
 pytest -q
 ```
-Configuration: `EVOMIND_HOST`, `EVOMIND_PORT`, `EVOMIND_DATA_DIR`, `EVOMIND_MODELS_DIR`, `EVOMIND_DB`.
+Configuration: `EVOMIND_HOST`, `EVOMIND_PORT`, `EVOMIND_DATA_DIR`, `EVOMIND_MODELS_DIR`, `EVOMIND_DB`. The knowledge base, approval queue and scheduled jobs are stored in the same local SQLite database. Workspace tools use `EVOMIND_DATA_DIR/workspace`.
+
+## Persistent agent scheduler
+The dashboard's **Agent scheduler** stores jobs in SQLite and checks for due work while the app is running. Jobs survive application restarts and resume when EVOMIND starts again. Supported actions are: `reflect` (queues memory candidates for human review), `create_task` (adds a local task), and one-time `agent_run` (runs one selected specialist agent). Arbitrary shell, Python, network and file-write jobs are not supported. Recurring schedules are limited to reflection and local task creation; the minimum interval is 60 seconds and the maximum is 30 days. Agent prompt runs are one-shot to avoid unattended repeated model execution. All times must include an ISO-8601 timezone; the dashboard converts your device's local time to UTC.
+
+API: `GET /api/scheduled-jobs`, `POST /api/scheduled-jobs`, and `POST /api/scheduled-jobs/{id}/cancel`. The scheduler starts/stops with the Litestar application lifecycle. On Linux, the systemd service starts EVOMIND at boot; on Android, the Termux:Boot host launcher starts the Debian app best-effort. Keep the device awake / exempt the host app from battery optimization if you need reliable background execution.

@@ -4,11 +4,15 @@ from litestar.response import Response
 from .config import settings
 from .engine import EvoMind
 from .agents import AgentHub
+from .system_tools import WorkspaceTools
 from .hf_models import HuggingFaceModels
+from .scheduler import JobScheduler
 settings.prepare()
 assistant=EvoMind(settings.db_path or settings.data_dir/"evomind.sqlite3",settings.models_dir)
-agents=AgentHub(assistant.db,assistant.models)
+workspace=WorkspaceTools(assistant.db,settings.data_dir/"workspace")
+agents=AgentHub(assistant.db,assistant.models,assistant.knowledge,workspace)
 hf_models=HuggingFaceModels(settings.models_dir)
+scheduler=JobScheduler(assistant.db,assistant,agents)
 @get("/")
 async def index():return Response((Path(__file__).parent/"static"/"index.html").read_text(),media_type="text/html")
 @post("/api/chat")
@@ -84,11 +88,35 @@ async def task_update(task_id:int,data:dict):
  if status not in ("pending","in_progress","done","cancelled"):return {"error":"Invalid task status"}
  assistant.db.execute("UPDATE tasks SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(status,task_id))
  return {"task":assistant.db.one("SELECT * FROM tasks WHERE id=?",(task_id,))}
+@get("/api/scheduled-jobs")
+async def scheduled_jobs():return {"jobs":scheduler.list()}
+@post("/api/scheduled-jobs")
+async def scheduled_job_create(data:dict):
+ try:return {"job":scheduler.create(str(data.get("title","")),str(data.get("kind","")),data.get("payload",{}),str(data.get("run_at","")),int(data.get("interval_seconds",0)))}
+ except Exception as e:return {"error":str(e)}
+@post("/api/scheduled-jobs/{job_id:int}/cancel")
+async def scheduled_job_cancel(job_id:int):return {"ok":scheduler.cancel(job_id)}
 @get("/api/system")
 async def system_info():
  import os,platform,sys
- return {"platform":platform.platform(),"python":sys.version.split()[0],"architecture":platform.machine(),"host":settings.host,"port":settings.port,"data_dir":str(settings.data_dir),"models_dir":str(settings.models_dir),"pid":os.getpid(),"autostart":"Linux: scripts/install_autostart.sh. Android Debian: Termux:Boot host integration."}
-app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select,agent_list,agent_history,agent_run,tool_run,task_list,task_create,task_update,system_info])
+ return {"platform":platform.platform(),"python":sys.version.split()[0],"architecture":platform.machine(),"host":settings.host,"port":settings.port,"data_dir":str(settings.data_dir),"models_dir":str(settings.models_dir),"workspace":str(workspace.root),"pid":os.getpid(),"autostart":"Linux: scripts/install_autostart.sh. Android Debian: Termux:Boot host integration."}
+@get("/api/knowledge")
+async def knowledge_list():return {"documents":assistant.knowledge.list()}
+@post("/api/knowledge")
+async def knowledge_add(data:dict):
+ try:return assistant.knowledge.add_text(str(data.get("title","")),str(data.get("content","")),str(data.get("source","pasted text")))
+ except Exception as e:return {"error":str(e)}
+@post("/api/knowledge/search")
+async def knowledge_search(data:dict):return {"results":assistant.knowledge.search(str(data.get("query","")),int(data.get("limit",8)))}
+@post("/api/knowledge/{document_id:int}/delete")
+async def knowledge_delete(document_id:int):return {"ok":assistant.knowledge.delete(document_id)}
+@get("/api/computer/requests")
+async def computer_requests():return {"requests":workspace.requests()}
+@post("/api/computer/requests/{request_id:int}/decision")
+async def computer_decision(request_id:int,data:dict):return workspace.decide(request_id,bool(data.get("approve",False)))
+def start_scheduler(app):scheduler.start()
+def stop_scheduler(app):scheduler.stop()
+app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select,agent_list,agent_history,agent_run,tool_run,task_list,task_create,task_update,system_info,knowledge_list,knowledge_add,knowledge_search,knowledge_delete,computer_requests,computer_decision,scheduled_jobs,scheduled_job_create,scheduled_job_cancel],on_startup=[start_scheduler],on_shutdown=[stop_scheduler])
 def main():
  import uvicorn
  uvicorn.run(app,host=settings.host,port=settings.port)
