@@ -105,7 +105,7 @@ async def knowledge_delete(document_id:int):return {"ok":assistant.knowledge.del
 async def computer_requests():return {"requests":workspace.requests()}
 @post("/api/computer/requests/{request_id:int}/decision")
 async def computer_decision(request_id:int,data:dict):return workspace.decide(request_id,bool(data.get("approve",False)))
-app=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select,agent_list,agent_history,agent_run,tool_run,task_list,task_create,task_update,system_info,knowledge_list,knowledge_add,knowledge_search,knowledge_delete,computer_requests,computer_decision,scheduled_jobs,scheduled_job_create,scheduled_job_cancel],on_startup=[scheduler.start],on_shutdown=[scheduler.stop])
+def start_scheduler(app):scheduler.start()\ndef stop_scheduler(app):scheduler.stop()\napp=Litestar(route_handlers=[index,chat,stats,memories,decision,reflect,skills,install,feedback,goals,add_goal,update_goal,hf_search,hf_files,hf_download,models,select,agent_list,agent_history,agent_run,tool_run,task_list,task_create,task_update,system_info,knowledge_list,knowledge_add,knowledge_search,knowledge_delete,computer_requests,computer_decision,scheduled_jobs,scheduled_job_create,scheduled_job_cancel],on_startup=[start_scheduler],on_shutdown=[stop_scheduler])
 def main():
  import uvicorn
  uvicorn.run(app,host=settings.host,port=settings.port)
